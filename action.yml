@@ -5,7 +5,7 @@ branding:
   color: 'yellow'
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       secretToken:
         description: 'Enter the secret token'
