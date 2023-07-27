@@ -5,7 +5,7 @@
 - Selecte a repository
 - Go to `Actions`.
 - Create a new `Workflow` file with the following content:
-  ```
+```
 name: Get Organization Info
 
 on:
