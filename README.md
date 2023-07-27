@@ -32,7 +32,7 @@ jobs:
          outputFileName: ${{ github.event.inputs.outputFileName }}
   ```
 - Generate a new Personal access token (PAT) with the following access scope:
-- repo _(Full control of private repositories)_
+  - repo _(Full control of private repositories)_
 - Copy the generated PAT
 - Create a new secret called AUDIT_TOKEN and paste PAT
 - At this point the GitHub Action should be ready to run.
