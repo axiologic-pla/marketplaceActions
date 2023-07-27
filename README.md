@@ -1,4 +1,4 @@
-# organisationAudit
+# OrganizationAudit
 
 ## Installation Process
 
@@ -22,11 +22,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        
       - name: Get Organization Info
-        uses: axiologic-pla/organisationAudit@v1
+        uses: axiologic-pla/organizationAudit@v1
         with:
          secretToken: ${{ secrets.AUDIT_TOKEN }}
          outputFileName: ${{ github.event.inputs.outputFileName }}
