@@ -1,8 +1,8 @@
-# OrganizationAudit
+# organizationAudit
 
 ## Installation Process
 
-- Selecte a repository
+- Select a repository
 - Go to `Actions`.
 - Create a new `Workflow` file with the following content:
 ```
@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Get Organization Info
-        uses: axiologic-pla/organizationAudit@v1
+        uses: axiologic-pla/organizationAudit@v1.0.0
         with:
          secretToken: ${{ secrets.AUDIT_TOKEN }}
          outputFileName: ${{ github.event.inputs.outputFileName }}
