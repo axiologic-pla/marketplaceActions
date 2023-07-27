@@ -2,6 +2,16 @@ name: Get Organization Info
 
 on:
   workflow_dispatch:
+    inputs:
+      secretToken:
+        description: 'Enter the secret token'
+        required: true
+        type: string
+      outputFileName:
+        description: 'Enter how the file should be called.'
+        required: true
+        type: string
+        default: 'report'
 
 env:
   ORG_NAME: ${{ github.repository_owner }}
@@ -13,19 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
-      - name: Check if GET_INFO_TOKEN exists
-        run: |
-          if [ -z "${{ secrets.GET_INFO_TOKEN }}" ]; then
-            echo "The GET_INFO_TOKEN secret does not exist."
-            exit 1
-          else
-            echo "The GET_INFO_TOKEN secret exists."
-          fi
 
       - name: Running the script
         run: |
-          GITHUB_TOKEN=${{ secrets.GET_INFO_TOKEN }}
+          GITHUB_TOKEN=${{ github.event.inputs.secretToken }}
 
           timestamp=$(date)
 
@@ -34,7 +35,7 @@ jobs:
           # Send a GET request to GH API and retrieve members from organization
           response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$ORG_API_URL/members")
           if [[ $response == *"Bad credentials"* ]]; then
-            cat >ghReport.md <<EOF
+            cat >${{ github.event.inputs.outputFileName }}.md <<EOF
           Bad credentials: The provided token has no access for running this script!
 
           Follow the Readme.md file for more information about the installation
@@ -90,8 +91,8 @@ jobs:
 
             done
 
-            # Write member title in file ghReport.md
-            cat >ghReport.md <<EOF
+            # Write member title in file ${{ github.event.inputs.outputFileName }}.md
+            cat >${{ github.event.inputs.outputFileName }}.md <<EOF
 
           # GitHub Access Report - Status
           Generated at $timestamp
@@ -104,30 +105,30 @@ jobs:
           | -- | -------- | ---- | ---- | ----- |
           EOF
 
-            # Write member content in file ghReport.md
+            # Write member content in file ${{ github.event.inputs.outputFileName }}.md
             length=${#users[@]}
             # Range of length of users
             for i in $(seq 1 "$length"); do
-              echo -n "| $i | ${users[$i - 1]} | " >>ghReport.md
+              echo -n "| $i | ${users[$i - 1]} | " >>${{ github.event.inputs.outputFileName }}.md
               if [[ "${names[$i - 1]}" == "null" ]]; then
-                echo -n " | " >>ghReport.md
+                echo -n " | " >>${{ github.event.inputs.outputFileName }}.md
               else
-                echo -n "${names[$i - 1]} | " >>ghReport.md
+                echo -n "${names[$i - 1]} | " >>${{ github.event.inputs.outputFileName }}.md
               fi
               if [[ "${roles[$i - 1]}" == "admin" ]]; then
-                echo -n "<ins>**${roles[$i - 1]}**</ins> | " >>ghReport.md
+                echo -n "<ins>**${roles[$i - 1]}**</ins> | " >>${{ github.event.inputs.outputFileName }}.md
               else
-                echo -n "${roles[$i - 1]} | " >>ghReport.md
+                echo -n "${roles[$i - 1]} | " >>${{ github.event.inputs.outputFileName }}.md
               fi
               for id in "${!team_content[@]}"; do
                 for team_name in ${team_content[$id]}; do
                   if [ "${users[$i - 1]}" == "$team_name" ]; then
-                    echo -n "$id<br>" >>ghReport.md
+                    echo -n "$id<br>" >>${{ github.event.inputs.outputFileName }}.md
                   fi
                 done
               done
 
-              echo "|" >>ghReport.md
+              echo "|" >>${{ github.event.inputs.outputFileName }}.md
             done
 
             # Repositories
@@ -145,8 +146,8 @@ jobs:
               repo_visibility+=("$visibility")
             done
 
-            # Write repository title in file ghReport.md
-            cat >>ghReport.md <<EOF
+            # Write repository title in file ${{ github.event.inputs.outputFileName }}.md
+            cat >>${{ github.event.inputs.outputFileName }}.md <<EOF
 
           ### Repositories
 
@@ -198,8 +199,8 @@ jobs:
                 repo_team_permission+=("$team_perm")
               done
 
-              # Write repository content in file ghReport.md
-              echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>ghReport.md
+              # Write repository content in file ${{ github.event.inputs.outputFileName }}.md
+              echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ github.event.inputs.outputFileName }}.md
 
               # Range of length of members from repo
               length_repo_members="${#repo_member_name[@]}"
@@ -207,48 +208,50 @@ jobs:
 
               if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
                 if [[ $length_repo_members != 0 ]]; then
-                  echo -n "**Members**<br>" >>ghReport.md
+                  echo -n "**Members**<br>" >>${{ github.event.inputs.outputFileName }}.md
                   for j in $(seq 0 "$length_repo_members"); do
-                    echo -n "${repo_member_name[$j]}<br>" >>ghReport.md
+                    echo -n "${repo_member_name[$j]}<br>" >>${{ github.event.inputs.outputFileName }}.md
                   done
                 fi
                 if [[ $length_repo_groups != 0 ]]; then
-                  echo -n "**Teams**<br>" >>ghReport.md
+                  echo -n "**Teams**<br>" >>${{ github.event.inputs.outputFileName }}.md
                   for j in $(seq 0 "$length_repo_groups"); do
-                    echo -n "${repo_team_name[$j]}<br>" >>ghReport.md
+                    echo -n "${repo_team_name[$j]}<br>" >>${{ github.event.inputs.outputFileName }}.md
                   done
                 fi
 
-                echo -n " | " >>ghReport.md
+                echo -n " | " >>${{ github.event.inputs.outputFileName }}.md
 
                 if [[ $length_repo_members != 0 ]]; then
-                  echo -n "<br>" >>ghReport.md
+                  echo -n "<br>" >>${{ github.event.inputs.outputFileName }}.md
                   for j in $(seq 0 "$length_repo_members"); do
-                    echo -n "${repo_member_role[$j]}<br>" >>ghReport.md
+                    echo -n "${repo_member_role[$j]}<br>" >>${{ github.event.inputs.outputFileName }}.md
                   done
                 fi
                 if [[ $length_repo_groups != 0 ]]; then
-                  echo -n "<br>" >>ghReport.md
+                  echo -n "<br>" >>${{ github.event.inputs.outputFileName }}.md
                   for j in $(seq 0 "$length_repo_groups"); do
-                    echo -n "${repo_team_permission[$j]}<br>" >>ghReport.md
+                    echo -n "${repo_team_permission[$j]}<br>" >>${{ github.event.inputs.outputFileName }}.md
                   done
                 fi
-                echo " |" >>ghReport.md
+                echo " |" >>${{ github.event.inputs.outputFileName }}.md
 
               else
-                echo " | |" >>ghReport.md
+                echo " | |" >>${{ github.event.inputs.outputFileName }}.md
               fi
             done
 
             # Provide error messages in case these exist
             if [[ -n "${#repo_perms_error[@]}" ]]; then
-              echo "You have the following errors:" >>ghReport.md
+              echo ""
+              echo "### You have the following errors:" >>${{ github.event.inputs.outputFileName }}.md
+              echo ""
               for i in "${!repo_perms_error[@]}"; do
-                echo "- Repo: $i" >>ghReport.md
-                echo "    - Message: ${repo_perms_error[$i]}" >>ghReport.md
+                echo "- Repo: $i" >>${{ github.event.inputs.outputFileName }}.md
+                echo "    - Message: ${repo_perms_error[$i]}" >>${{ github.event.inputs.outputFileName }}.md
               done
-              echo "" >>ghReport.md
-              echo "This can be caused by not having permission on those repos." >>ghReport.md
+              echo "" >>${{ github.event.inputs.outputFileName }}.md
+              echo "This can be caused by not having permission on those repos." >>${{ github.event.inputs.outputFileName }}.md
             fi
           fi
           
@@ -259,5 +262,5 @@ jobs:
           git config --global user.email "your@email.com"
           git config --global user.name "${{ github.actor }}"
           git add .
-          git commit -m "File ghReport.md - Generated at $current_date"
+          git commit -m "File ${{ github.event.inputs.outputFileName }}.md - Generated at $current_date"
           git push
