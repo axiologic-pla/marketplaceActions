@@ -3,15 +3,18 @@ description: 'An action to retrieve information about an organization, its membe
 icon: info
 color: yellow
 
-inputs:
-  secretToken:
-    description: 'Enter the secret token'
-    required: true
-
-  outputFileName:
-    description: 'Enter how the file should be called.'
-    required: true
-    default: 'report'
+on:
+  workflow_call:
+    inputs:
+      secretToken:
+        description: 'Enter the secret token'
+        required: true
+        type: string
+      outputFileName:
+        description: 'Enter how the file should be called.'
+        required: true
+        type: string
+        default: 'report'
 
 
 runs:
