@@ -1,5 +1,6 @@
 name: Get Organization Info
 description: 'An action to retrieve information about an organization, its members, teams, and repositories.'
+icon: info
 
 inputs:
   secretToken:
