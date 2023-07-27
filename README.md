@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v3
         
       - name: Get Organization Info
-        uses: axiologic-pla/organisationAudit@v.1.0.3
+        uses: axiologic-pla/organisationAudit@latest
         with:
          secretToken: ${{ secrets.AUDIT_TOKEN }}
          outputFileName: ${{ github.event.inputs.outputFileName }}
