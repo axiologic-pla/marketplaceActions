@@ -4,6 +4,8 @@ SOURCE_ORG=$1
 TARGET_ORG=$2
 GITHUB_TOKEN=$3
 
+echo "GITHUB_TOKEN = $GITHUB_TOKEN"
+
 response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -w "%{http_code}" -o response.json "https://api.github.com/orgs/$SOURCE_ORG/repos?type=all&per_page=100")
 status_code=$(tail -n1 <<< "$response")
 
