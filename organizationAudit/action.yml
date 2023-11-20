@@ -1,4 +1,4 @@
-name: Get Organization Info
+name: 'Get Organization Info'
 description: 'An action to retrieve information about an organization, its members, teams, and repositories.'
 branding:
   icon: 'info'

@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Get Organization Info
-        uses: axiologic-pla/marketplaceActions/organizationAudit@v1.0.0
+        uses: axiologic-pla/marketplaceActions/organizationAudit/action.yaml
         with:
          secretToken: ${{ secrets.AUDIT_TOKEN }}
          outputFileName: ${{ github.event.inputs.outputFileName }}

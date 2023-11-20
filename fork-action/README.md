@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: 'Run script to fork repositories'
-        uses: axiologic-pla/marketplaceActions/fork-action@v1.0.0
+        uses: axiologic-pla/marketplaceActions/fork-action/action.yaml
         with:
          source_org: ${{ inputs.sourceOrg }}
          target_org: ${{ inputs.targetOrg }}
