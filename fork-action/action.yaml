@@ -34,4 +34,3 @@ runs:
         SOURCE_ORG: ${{ inputs.source_org }}
         TARGET_ORG: ${{ inputs.target_org }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
-
