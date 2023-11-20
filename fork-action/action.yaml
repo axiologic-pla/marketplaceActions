@@ -21,6 +21,8 @@ runs:
   steps:
     - name: 'Checkout Code'
       uses: actions/checkout@v4
+      with:
+        repository: "axiologic-pla/marketplaceActions"
 
     - name: 'Run script to fork repositories'
       run: |
