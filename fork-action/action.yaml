@@ -4,30 +4,27 @@ branding:
   icon: 'repo-forked'
   color: 'blue'
 
-on:
-  workflow_dispatch:
-      inputs:
-          source_org:
-              description: 'The source organization'
-              required: true
-          target_org:
-              description: 'The target organization'
-              required: true
-          github_token:
-              description: 'GitHub token for authentication'
-              required: true
-
+inputs:
+  source_org:
+    description: 'The source organization'
+    required: true
+  target_org:
+    description: 'The target organization'
+    required: true
+  github_token:
+    description: 'GitHub token for authentication'
+    required: true
 
 runs:
   using: 'composite'
   steps:
-      - name: 'Checkout Code'
-        uses: actions/checkout@v4
+    - name: 'Checkout Code'
+      uses: actions/checkout@v4
 
-      - name: 'Run script to fork repositories'
-        run: fork_repos.sh
-        shell: bash
-        env:
-            SOURCE_ORG: ${{ github.event.inputs.sourceOrg }}
-            TARGET_ORG: ${{ github.event.inputs.targetOrg }}
-            GITHUB_TOKEN: ${{ inputs.github_token }}
+    - name: 'Run script to fork repositories'
+      run: bash fork_repos.sh
+      shell: bash
+      env:
+        SOURCE_ORG: ${{ inputs.source_org }}
+        TARGET_ORG: ${{ inputs.target_org }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
