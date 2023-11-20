@@ -19,20 +19,24 @@ on:
         type: string
         description: 'Name of the organization to fork to.'
         required: true
-  
+
 jobs:
   fork_repositories:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+
       - name: 'Run script to fork repositories'
-        uses: axiologic-pla/marketplaceActions/fork-action/action.yaml
+        uses: axiologic-pla/marketplaceActions/fork-action@main
         with:
          source_org: ${{ inputs.sourceOrg }}
          target_org: ${{ inputs.targetOrg }}
          github_token: ${{ secrets.GITHUB_TOKEN }}
+
   ```
-- Generate a new Personal access token (PAT) with the following access scope:
+- Generate a new Personal access token (PAT) that has access to both organizations (source and target) with the following access scope:
     - repo _(Full control of private repositories)_
 - Copy the generated PAT
 - Create a new secret called GITHUB_TOKEN and paste PAT
