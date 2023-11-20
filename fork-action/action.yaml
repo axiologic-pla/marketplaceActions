@@ -1,5 +1,6 @@
 name: 'Fork Organization Repositories'
 description: 'Forks all repositories from one organization to another'
+
 branding:
   icon: 'repo-forked'
   color: 'blue'
