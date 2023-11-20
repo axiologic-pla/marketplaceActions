@@ -28,6 +28,6 @@ runs:
         run: fork_repos.sh
         shell: bash
         env:
-            SOURCE_ORG: ${{ inputs.source_org }}
-            TARGET_ORG: ${{ inputs.target_org }}
+            SOURCE_ORG: ${{ github.event.inputs.sourceOrg }}
+            TARGET_ORG: ${{ github.event.inputs.targetOrg }}
             GITHUB_TOKEN: ${{ inputs.github_token }}
