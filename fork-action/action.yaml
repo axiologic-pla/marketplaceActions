@@ -23,7 +23,7 @@ runs:
       uses: actions/checkout@v4
 
     - name: 'Run script to fork repositories'
-      run: ./fork-action/fork_repos.sh
+      run: ./fork_repos.sh
       shell: bash
       env:
         SOURCE_ORG: ${{ inputs.source_org }}
