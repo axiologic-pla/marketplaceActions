@@ -22,10 +22,6 @@ runs:
     - name: 'Checkout Code'
       uses: actions/checkout@v4
 
-    - name: 'Make script executable'
-      run: chmod +x ./fork-action/fork_repos.sh
-      shell: bash
-
     - name: 'Run script to fork repositories'
       run: ./fork-action/fork_repos.sh
       shell: bash
