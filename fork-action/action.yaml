@@ -21,11 +21,16 @@ runs:
   steps:
     - name: 'Checkout Code'
       uses: actions/checkout@v4
+
+    - name: 'Make script executable'
+      run: chmod +x ./fork-action/fork_repos.sh
+      shell: bash
+
     - name: 'Run script to fork repositories'
-      run: |
-        ./fork-action/fork_repos.sh
+      run: ./fork-action/fork_repos.sh
       shell: bash
       env:
         SOURCE_ORG: ${{ inputs.source_org }}
         TARGET_ORG: ${{ inputs.target_org }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
+
