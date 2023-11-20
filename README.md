@@ -1,35 +1,9 @@
-# organizationAudit
+# Marketplace Actions
 
-## Installation Process
+## Organization Audit
 
-- Select a repository
-- Go to `Actions`.
-- Create a new `Workflow` file with the following content:
-```
-name: Get Organization Info
+- An action to retrieve information about an organization, its members, teams, and repositories.
 
-on:
-  workflow_dispatch:
-    inputs:
-      outputFileName:
-        type: string
-        description: 'Enter how the output file should be called.'
-        required: true
-        default: 'AuditResult'
-  
-jobs:
-  get_information:
-    runs-on: ubuntu-latest
+## Fork Organization Repositories
 
-    steps:
-      - name: Get Organization Info
-        uses: axiologic-pla/organizationAudit@v1.0.0
-        with:
-         secretToken: ${{ secrets.AUDIT_TOKEN }}
-         outputFileName: ${{ github.event.inputs.outputFileName }}
-  ```
-- Generate a new Personal access token (PAT) with the following access scope:
-    - repo _(Full control of private repositories)_
-- Copy the generated PAT
-- Create a new secret called AUDIT_TOKEN and paste PAT
-- At this point the GitHub Action should be ready to run.
+- An action that forks all repositories from one organization to another

@@ -1,0 +1,33 @@
+name: 'Fork Organization Repositories'
+description: 'Forks all repositories from one organization to another'
+branding:
+  icon: 'info'
+  color: 'yellow'
+
+on:
+  workflow_dispatch:
+      inputs:
+          source_org:
+              description: 'The source organization'
+              required: true
+          target_org:
+              description: 'The target organization'
+              required: true
+          github_token:
+              description: 'GitHub token for authentication'
+              required: true
+
+
+runs:
+  using: 'composite'
+  steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@v4
+
+      - name: 'Run script to fork repositories'
+        run: fork_repos.sh
+        shell: bash
+        env:
+            SOURCE_ORG: ${{ inputs.source_org }}
+            TARGET_ORG: ${{ inputs.target_org }}
+            GITHUB_TOKEN: ${{ inputs.github_token }}
