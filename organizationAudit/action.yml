@@ -4,18 +4,13 @@ branding:
   icon: 'info'
   color: 'yellow'
 
-on:
-  workflow_dispatch:
-    inputs:
-      secretToken:
-        description: 'Enter the secret token'
-        required: true
-        type: string
-      outputFileName:
-        description: 'Enter how the file should be called.'
-        required: true
-        type: string
-        default: 'report'
+inputs:
+  secretToken:
+    description: 'Enter the secret token'
+    required: true
+  outputFileName:
+    description: 'Enter how the file should be called.'
+    required: true
 
 
 runs:
