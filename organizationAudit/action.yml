@@ -265,12 +265,9 @@ runs:
               echo " | |" >>${{ inputs.outputFileName }}.md
             fi
           done
-          for i in "${!repo_perms_error[@]}"; do
-            echo "Repo: $i, Message: ${repo_perms_error[$i]}">>${{ inputs.outputFileName }}.md
-          done
 
           # Provide error messages in case these exist
-          if [[ -n "${#repo_perms_error[@]}" ]]; then
+          if [[ "${#repo_perms_error[@]}" -gt 0 ]]; then
             echo ""
             echo "### You have the following errors:" >>${{ inputs.outputFileName }}.md
             echo ""
