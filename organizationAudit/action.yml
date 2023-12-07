@@ -217,7 +217,8 @@ runs:
             # Branches
             if [[ $length_repo_branches != 0 ]]; then
                 for j in $(seq 0 "$(($length_repo_branches - 1))"); do
-                    echo -n "${repo_branches[$j]}<br>" >>${{ inputs.outputFileName }}.md
+                    # echo -n "${repo_branches[$j]}<br>" >>${{ inputs.outputFileName }}.md
+                    echo -n "<br>" >>${{ inputs.outputFileName }}.md
                 done
             else
                 if [[ -n "${repo_branches_error[${repo_name[$i - 1]}]}" ]]; then
