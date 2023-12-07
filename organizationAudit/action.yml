@@ -266,7 +266,7 @@ runs:
             fi
           done
           for i in "${!repo_perms_error[@]}"; do
-            echo "Repo: $i, Message: ${repo_perms_error[$i]}"
+            echo "Repo: $i, Message: ${repo_perms_error[$i]}">>${{ inputs.outputFileName }}.md
           done
 
           # Provide error messages in case these exist
