@@ -144,8 +144,8 @@ runs:
 
         ### Repositories
 
-        | No | Repo Name | Visibility | Members/Teams | Role |
-        | -- | --------- | ---------- | ------------- | ---- |
+        | No | Repo Name | Visibility | Branches | Members/Teams | Role |
+        | -- | --------- | ---------- | -------- | ------------- | ---- |
         EOF
 
           length_repo="${#repo_name[@]}"
@@ -191,14 +191,45 @@ runs:
             for team_perm in $response_repo_team_permission; do
               repo_team_permission+=("$team_perm")
             done
-
+        
+            # Fetch Branches
+            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$REPO_API_URL/branches")
+            if jq -e '.message' <<<"$response" >/dev/null 2>&1; then
+                repo_branches_error["${repo_name[$i - 1]}"]=$(echo "$response" | jq -r '.message')
+                response_repo_branches=""
+            else
+                response_repo_branches=$(echo "$response" | jq -r '.[].name')
+            fi
+        
+            repo_branches=()
+            for branch in $response_repo_branches; do
+            repo_branches+=("$branch")
+            done
+        
             # Write repository content in file ${{ inputs.outputFileName }}.md
             echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ inputs.outputFileName }}.md
 
             # Range of length of members from repo
             length_repo_members="${#repo_member_name[@]}"
             length_repo_groups="${#repo_team_name[@]}"
+            length_repo_branches="${#repo_branches[@]}"
+            
+            # Branches
+            if [[ $length_repo_branches != 0 ]]; then
+                for j in $(seq 0 "$(($length_repo_branches - 1))"); do
+                    echo -n "${repo_branches[$j]}<br>" >>${{ inputs.outputFileName }}.md
+                done
+            else
+                if [[ -n "${repo_branches_error[${repo_name[$i - 1]}]}" ]]; then
+                    echo -n "Error fetching branches: ${repo_branches_error[${repo_name[$i - 1]}]}<br>" >>${{ inputs.outputFileName }}.md
+                else
+                    echo -n "No branches<br>" >>${{ inputs.outputFileName }}.md
+                fi
+            fi
+            
+            echo -n " | " >>${{ inputs.outputFileName }}.md
 
+            # Members/Teams
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
@@ -215,6 +246,7 @@ runs:
 
               echo -n " | " >>${{ inputs.outputFileName }}.md
 
+              # Roles
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_members"); do
