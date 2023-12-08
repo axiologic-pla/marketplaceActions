@@ -143,13 +143,24 @@ runs:
           fetch_codeowners() {
               repo_name=$1
               paths=("CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS")
-              repo_codeowners=""
+              formatted_codeowners=""
+              codeowners_content=""
             
               for path in "${paths[@]}"; do
                   response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/$ORG_NAME/$repo_name/contents/$path")
                   if echo "$response" | grep -q "download_url"; then
                       download_url=$(echo "$response" | grep "download_url" | cut -d '"' -f 4)
-                      repo_codeowners=$(curl -s "$download_url")
+                      codeowners_content=$(curl -s "$download_url")
+                      while IFS= read -r line; do
+                      # Skip comments and empty lines
+                      if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
+                          continue
+                      fi
+                      # Append the line to the formatted string, replace spaces with `&nbsp;` for Markdown table compatibility
+                      formatted_codeowners+="$(echo "$line" | sed 's/ /&nbsp;/g');<br>"
+                      done <<< "$codeowners_content"
+                      # Remove last semicolon and <br>
+                      formatted_codeowners=${formatted_codeowners%;<br>}
                       break
                   fi
               done
@@ -226,9 +237,9 @@ runs:
             done
             
             # Fetch CODEOWNERS
-            codeowners=$(fetch_codeowners "${repo_name[$i - 1]}")
-            if [[ -z "$codeowners" ]]; then
-                codeowners="No CODEOWNERS file found"
+            formatted_codeowners=$(fetch_and_format_codeowners "${repo_name[$i - 1]}")
+            if [[ -z "$formatted_codeowners" ]]; then
+                formatted_codeowners="No&nbsp;CODEOWNERS&nbsp;file&nbsp;found"
             fi
             
             # Write repository content in file ${{ inputs.outputFileName }}.md
@@ -255,7 +266,7 @@ runs:
             echo -n " | " >>${{ inputs.outputFileName }}.md
             
             # CODEOWNERS append
-            echo -n "$codeowners | " >>${{ inputs.outputFileName }}.md
+            echo -n " | $formatted_codeowners |" >>${{ inputs.outputFileName }}.md
 
             # Members/Teams
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
