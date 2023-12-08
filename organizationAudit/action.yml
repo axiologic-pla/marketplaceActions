@@ -266,7 +266,7 @@ runs:
             echo -n " | " >>${{ inputs.outputFileName }}.md
             
             # CODEOWNERS append
-            echo -n " | $formatted_codeowners |" >>${{ inputs.outputFileName }}.md
+            echo -n "$formatted_codeowners | " >>${{ inputs.outputFileName }}.md
 
             # Members/Teams
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
