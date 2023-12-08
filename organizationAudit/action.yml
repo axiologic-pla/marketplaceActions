@@ -140,7 +140,7 @@ runs:
           done
 
           # Fetch CODEOWNERS file
-          fetch_codeowners() {
+          fetch_and_format_codeowners() {
               repo_name=$1
               paths=("CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS")
               formatted_codeowners=""
