@@ -152,20 +152,17 @@ runs:
                       download_url=$(echo "$response" | grep "download_url" | cut -d '"' -f 4)
                       codeowners_content=$(curl -s "$download_url")
                       while IFS= read -r line; do
-                      # Skip comments and empty lines
-                      if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
-                          continue
-                      fi
-                      # Append the line to the formatted string, replace spaces with `&nbsp;` for Markdown table compatibility
-                      formatted_codeowners+="$(echo "$line" | sed 's/ /&nbsp;/g');<br>"
+                        # Skip comments and empty lines
+                        if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
+                            continue
+                        fi
+                        formatted_codeowners+="${line}<br>"
                       done <<< "$codeowners_content"
-                      # Remove last semicolon and <br>
-                      formatted_codeowners=${formatted_codeowners%;<br>}
                       break
                   fi
               done
             
-              echo "$repo_codeowners"
+              echo "$formatted_codeowners"
           }
 
           # Write repository title in file ${{ inputs.outputFileName }}.md
@@ -239,7 +236,7 @@ runs:
             # Fetch CODEOWNERS
             formatted_codeowners=$(fetch_and_format_codeowners "${repo_name[$i - 1]}")
             if [[ -z "$formatted_codeowners" ]]; then
-                formatted_codeowners="No&nbsp;CODEOWNERS&nbsp;file&nbsp;found"
+                formatted_codeowners="No CODEOWNERS file found"
             fi
             
             # Write repository content in file ${{ inputs.outputFileName }}.md
