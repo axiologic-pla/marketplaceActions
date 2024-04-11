@@ -48,15 +48,6 @@ runs:
             roles+=("$role")
 
           done
-          
-          # Fetch organization members and store their usernames and roles
-          org_members=()
-          org_member_roles=()
-          for member in $(echo "$response" | jq -r '.[] | select(.login != null) | .login'); do
-            org_members+=("$member")
-            role=$(echo "$response" | jq -r ".[] | select(.login == \"$member\") | .role")
-            org_member_roles+=("$role")
-          done
 
           # Name of members
           names=()
@@ -291,9 +282,9 @@ runs:
             echo -n "$formatted_codeowners | " >>${{ inputs.outputFileName }}.md
 
             # Write "Members/Teams" and "Role" columns
-            for ((j=0; j<${#org_members[@]}; j++)); do
-              member="${org_members[$j]}"
-              org_role="${org_member_roles[$j]}"
+            for ((j=0; j<${#users[@]}; j++)); do
+              member="${users[$j]}"
+              org_role="${roles[$j]}"
               
               team_role=""
               team_name=""
