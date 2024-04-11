@@ -289,7 +289,8 @@ runs:
               team_role=""
               team_name=""
               for ((k=0; k<${#repo_team_name[@]}; k++)); do
-                if [[ "${repo_team_members[$k]}" =~ "$member" ]]; then
+                IFS=' ' read -ra team_members_array <<< "${repo_team_members[$k]}"
+                if [[ " ${team_members_array[@]} " =~ " $member " ]]; then
                   if [[ "${repo_team_permission[$k]}" > "$team_role" ]]; then
                     team_role="${repo_team_permission[$k]}"
                     team_name="${repo_team_name[$k]}"
