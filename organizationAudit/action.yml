@@ -145,7 +145,7 @@ runs:
               paths=("CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS")
               formatted_codeowners=""
               codeowners_content=""
-            
+        
               for path in "${paths[@]}"; do
                   response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/$ORG_NAME/$repo_name/contents/$path")
                   if echo "$response" | grep -q "download_url"; then
@@ -161,7 +161,7 @@ runs:
                       break
                   fi
               done
-            
+        
               echo "$formatted_codeowners"
           }
 
@@ -219,9 +219,9 @@ runs:
               team_name=${response_repo_team_name[j]}
               team_perm=${response_repo_team_permission[j]}
               team_slug=${response_repo_team_slug[j]}
-            
+        
               repo_team_name+=("$team_name")
-              
+        
               if [[ "$team_perm" == "push" ]]; then
                 repo_team_permission+=("write")
               elif [[ "$team_perm" == "pull" ]]; then
@@ -229,7 +229,7 @@ runs:
               else
                 repo_team_permission+=("$team_perm")
               fi
-            
+        
               team_members_response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$ORG_NAME/teams/$team_slug/members")
               repo_team_members+=("$team_members_response")
             done
@@ -247,13 +247,13 @@ runs:
             for branch in $response_repo_branches; do
             repo_branches+=("$branch")
             done
-            
+        
             # Fetch CODEOWNERS
             formatted_codeowners=$(fetch_and_format_codeowners "${repo_name[$i - 1]}")
             if [[ -z "$formatted_codeowners" ]]; then
                 formatted_codeowners="No CODEOWNERS file found"
             fi
-            
+        
             # Write repository content in file ${{ inputs.outputFileName }}.md
             echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ inputs.outputFileName }}.md
 
@@ -261,7 +261,7 @@ runs:
             length_repo_members="${#repo_member_name[@]}"
             length_repo_groups="${#repo_team_name[@]}"
             length_repo_branches="${#repo_branches[@]}"
-            
+        
             # Branches
             if [[ $length_repo_branches != 0 ]]; then
                 for j in $(seq 0 "$(($length_repo_branches - 1))"); do
@@ -274,9 +274,9 @@ runs:
                     echo -n "No branches<br>" >>${{ inputs.outputFileName }}.md
                 fi
             fi
-            
+        
             echo -n " | " >>${{ inputs.outputFileName }}.md
-            
+        
             # CODEOWNERS append
             echo -n "$formatted_codeowners | " >>${{ inputs.outputFileName }}.md
 
@@ -284,7 +284,7 @@ runs:
             for ((j=0; j<${#users[@]}; j++)); do
               member="${users[$j]}"
               org_role="${roles[$j]}"
-              
+        
               team_role=""
               team_name=""
               for ((k=0; k<${#repo_team_name[@]}; k++)); do
@@ -295,7 +295,7 @@ runs:
                   fi
                 fi
               done
-              
+        
               if [[ -z "$team_role" ]]; then
                 echo -n "$member (Individual)<br>" >>${{ inputs.outputFileName }}.md
                 echo -n "$org_role<br>" >>${{ inputs.outputFileName }}.md
@@ -307,8 +307,9 @@ runs:
                 echo -n "$org_role<br>" >>${{ inputs.outputFileName }}.md
               fi
             done
-            
+        
             echo " |" >>${{ inputs.outputFileName }}.md
+          done
 
           # Provide error messages in case these exist
           if [[ "${#repo_perms_error[@]}" -gt 0 ]]; then
