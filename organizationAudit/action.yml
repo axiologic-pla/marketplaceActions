@@ -231,8 +231,7 @@ runs:
               fi
             
               team_members_response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$ORG_NAME/teams/$team_slug/members")
-              team_members=$(echo "$team_members_response" | jq -r '.[].login')
-              repo_team_members+=("$team_members")
+              repo_team_members+=("$team_members_response")
             done
         
             # Fetch Branches
@@ -289,8 +288,7 @@ runs:
               team_role=""
               team_name=""
               for ((k=0; k<${#repo_team_name[@]}; k++)); do
-                IFS=' ' read -ra team_members_array <<< "${repo_team_members[$k]}"
-                if [[ " ${team_members_array[@]} " =~ " $member " ]]; then
+                if echo "${repo_team_members[$k]}" | jq -e ".[] | select(.login == \"$member\")" >/dev/null; then
                   if [[ "${repo_team_permission[$k]}" > "$team_role" ]]; then
                     team_role="${repo_team_permission[$k]}"
                     team_name="${repo_team_name[$k]}"
@@ -311,7 +309,6 @@ runs:
             done
             
             echo " |" >>${{ inputs.outputFileName }}.md
-          done
 
           # Provide error messages in case these exist
           if [[ "${#repo_perms_error[@]}" -gt 0 ]]; then
