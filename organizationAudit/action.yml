@@ -205,15 +205,20 @@ runs:
             if jq -e '.message' <<<"$response" >/dev/null 2>&1; then
               response_repo_team_name=""
               response_repo_team_permission=""
+              response_repo_team_slug=""
             else
               response_repo_team_name=$(echo "$response" | jq -r '.[].name')
               response_repo_team_permission=$(echo "$response" | jq -r '.[].permission')
+              response_repo_team_slug=$(echo "$response" | jq -r '.[].slug')
             fi
 
             repo_team_name=()
             repo_team_permission=()
+            repo_team_members=()
             for team_name in $response_repo_team_name; do
               repo_team_name+=("$team_name")
+              team_members_response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$ORG_NAME/teams/$team_name/members")
+              repo_team_members+=("$team_members_response")
             done
             for team_perm in $response_repo_team_permission; do
               if [[ "$team_perm" == "push" ]]; then
@@ -292,7 +297,18 @@ runs:
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_members"); do
-                  echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
+                  user_in_team=false
+                  for repo_team_member in "${repo_team_members[@]}"; do
+                    if [[ "${users[$j]}" == "$repo_team_member" ]]; then
+                      user_in_team=true
+                      break
+                    fi
+                  done
+                  if $user_in_team; then
+                    echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
+                  else
+                    echo -n "${repo_member_role[$j]}(Individual)<br>" >>${{ inputs.outputFileName }}.md
+                  fi
                 done
               fi
               if [[ $length_repo_groups != 0 ]]; then
