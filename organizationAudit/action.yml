@@ -216,7 +216,13 @@ runs:
               repo_team_name+=("$team_name")
             done
             for team_perm in $response_repo_team_permission; do
-              repo_team_permission+=("$team_perm")
+              if [[ "$team_perm" == "push" ]]; then
+                repo_team_permission+=("write")
+              elif [[ "$team_perm" == "pull" ]]; then
+                repo_team_permission+=("read")
+              else
+                repo_team_permission+=("$team_perm")
+              fi
             done
         
             # Fetch Branches
