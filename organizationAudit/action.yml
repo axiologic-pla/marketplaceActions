@@ -298,7 +298,10 @@ runs:
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_members"); do
                   user_in_team=false
+                  echo "repo_team_members = ${repo_team_members[@]}"
                   for repo_team_member in "${repo_team_members[@]}"; do
+                    echo "repo_team_member = $repo_team_member"
+                    echo "users = ${users[$j]}"
                     if [[ "${users[$j]}" == "$repo_team_member" ]]; then
                       user_in_team=true
                       break
@@ -307,7 +310,7 @@ runs:
                   if $user_in_team; then
                     echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
                   else
-                    echo -n "${repo_member_role[$j]}(Individual)<br>" >>${{ inputs.outputFileName }}.md
+                    echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
                   fi
                 done
               fi
