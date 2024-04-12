@@ -303,13 +303,15 @@ runs:
                   user_in_team=false
                   echo "repo_team_members = ${repo_team_members[@]}"
                   for repo_team_member in "${repo_team_members[@]}"; do
-                    echo "repo_team_member = $repo_team_member"
-                    echo "users = ${users[$j]}"
                     if [[ "${users[$j]}" == "$repo_team_member" ]]; then
+                      echo "repo_team_member = $repo_team_member"
                       user_in_team=true
                       break
                     fi
                   done
+          
+                  echo "user = ${users[$j]}"
+          
                   if $user_in_team; then
                     echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
                   else
