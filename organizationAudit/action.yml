@@ -253,6 +253,7 @@ runs:
         
             # Write repository content in file ${{ inputs.outputFileName }}.md
             echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ inputs.outputFileName }}.md
+            echo "${repo_name[$i - 1]}"
 
             # Range of length of members from repo
             length_repo_members="${#repo_member_name[@]}"
@@ -289,6 +290,7 @@ runs:
                 echo -n "**Teams**<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_groups"); do
                   echo -n "${repo_team_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
+                  echo "${repo_team_name[$j]}"
                 done
               fi
 
