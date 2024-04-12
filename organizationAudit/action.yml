@@ -218,7 +218,8 @@ runs:
             for team_name in $response_repo_team_name; do
               repo_team_name+=("$team_name")
               team_members_response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$ORG_NAME/teams/$team_name/members")
-              repo_team_members+=$(echo "$team_members_response" | jq -r '.[].login')
+              mapfile -t team_members < <(echo "$team_members_response" | jq -r '.[].login')
+              repo_team_members+=("${team_members[@]}")
             done
             for team_perm in $response_repo_team_permission; do
               if [[ "$team_perm" == "push" ]]; then
