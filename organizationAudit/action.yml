@@ -286,7 +286,9 @@ runs:
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
+                echo "${!repo_member_roles[@]}"
                 for member in "${!repo_member_roles[@]}"; do
+                  echo "member = $member"
                   echo -n "$member<br>" >>${{ inputs.outputFileName }}.md
                 done
               fi
