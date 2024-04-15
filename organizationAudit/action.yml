@@ -284,8 +284,6 @@ runs:
                 echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_members"); do
                   echo -n "${repo_member_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                  echo "all repo_member_name = ${repo_member_name[@]}"
-                  echo "repo_member_name = ${repo_member_name[$j]}"
                 done
               fi
               if [[ $length_repo_groups != 0 ]]; then
@@ -301,22 +299,27 @@ runs:
               # Roles
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
+        
+                echo "all users = ${users[@]}"
+                echo "all repo_member_name = ${repo_member_name[@]}"
+                echo "all repo_team_members = ${repo_team_members[@]}"
+          
                 for j in $(seq 0 "$length_repo_members"); do
                   user_in_team=false
-                  echo "all users = ${users[@]}"
                   for repo_team_member in "${repo_team_members[@]}"; do
-                    if [[ "${users[$j]}" == "$repo_team_member" ]]; then
+                    if [[ "${repo_member_name[$j]}" == "$repo_team_member" ]]; then
                       echo "repo_team_member = $repo_team_member"
+                      echo "repo_member_name = ${repo_member_name[$j]}"
                       user_in_team=true
                       break
                     fi
                   done
           
                   if $user_in_team; then
-                    echo "repo member (team) = $repo_team_member - ${repo_member_role[$j]}"
+                    echo "repo member (team) = $repo_member_name - ${repo_member_role[$j]}"
                     echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
                   else
-                    echo "repo member (individual) = $repo_team_member - ${repo_member_role[$j]}"
+                    echo "repo member (individual) = $repo_member_name - ${repo_member_role[$j]}"
                     echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
                   fi
                 done
