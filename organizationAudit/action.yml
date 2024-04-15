@@ -191,14 +191,14 @@ runs:
               response_repo_member_roles=$(echo "$response" | jq -r '.[].role_name')
             fi
 
-            #            repo_member_name=()
-            #            repo_member_role=()
-            #            for name in $response_repo_member; do
-            #              repo_member_name+=("$name")
-            #            done
-            #            for role in $response_repo_member_roles; do
-            #              repo_member_role+=("$role")
-            #            done
+            repo_member_name=()
+            repo_member_role=()
+            for name in $response_repo_member; do
+              repo_member_name+=("$name")
+            done
+            for role in $response_repo_member_roles; do
+              repo_member_role+=("$role")
+            done
             declare -A repo_member_roles
             for i in "${!repo_member_name[@]}"; do
               repo_member_roles["${repo_member_name[$i]}"]="${repo_member_role[$i]}"
@@ -260,7 +260,7 @@ runs:
             echo "repo name = ${repo_name[$i - 1]}"
 
             # Range of length of members from repo
-            length_repo_members="${#repo_member_roles[@]}"
+            length_repo_members="${#repo_member_name[@]}"
             length_repo_groups="${#repo_team_name[@]}"
             length_repo_branches="${#repo_branches[@]}"
         
@@ -286,10 +286,8 @@ runs:
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
-                echo "${!repo_member_roles[@]}"
-                for member in "${!repo_member_roles[@]}"; do
-                  echo "member = $member"
-                  echo -n "$member<br>" >>${{ inputs.outputFileName }}.md
+                for j in $(seq 0 "$length_repo_members"); do
+                  echo -n "${repo_member_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
                 done
               fi
               if [[ $length_repo_groups != 0 ]]; then
