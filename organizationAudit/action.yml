@@ -253,7 +253,7 @@ runs:
         
             # Write repository content in file ${{ inputs.outputFileName }}.md
             echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ inputs.outputFileName }}.md
-            echo "${repo_name[$i - 1]}"
+            echo "repo name = ${repo_name[$i - 1]}"
 
             # Range of length of members from repo
             length_repo_members="${#repo_member_name[@]}"
@@ -290,7 +290,7 @@ runs:
                 echo -n "**Teams**<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_groups"); do
                   echo -n "${repo_team_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                  echo "${repo_team_name[$j]}"
+                  echo "repo team = ${repo_team_name[$j]}"
                 done
               fi
 
@@ -301,6 +301,8 @@ runs:
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
                 for j in $(seq 0 "$length_repo_members"); do
                   user_in_team=false
+                  echo "user = ${users[$j]}"
+                  echo "all users = ${users[@]}"
                   echo "repo_team_members = ${repo_team_members[@]}"
                   for repo_team_member in "${repo_team_members[@]}"; do
                     if [[ "${users[$j]}" == "$repo_team_member" ]]; then
@@ -310,11 +312,11 @@ runs:
                     fi
                   done
           
-                  echo "user = ${users[$j]}"
-          
                   if $user_in_team; then
+                    echo "repo member (team) = ${repo_member_role[$j]}"
                     echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
                   else
+                    echo "repo member (individual) = ${repo_member_role[$j]}"
                     echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
                   fi
                 done
