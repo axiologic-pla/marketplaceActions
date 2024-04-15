@@ -199,10 +199,6 @@ runs:
             for role in $response_repo_member_roles; do
               repo_member_role+=("$role")
             done
-            declare -A repo_member_roles
-            for i in "${!repo_member_name[@]}"; do
-              repo_member_roles["${repo_member_name[$i]}"]="${repo_member_role[$i]}"
-            done
 
             # Fetch Teams
             response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$REPO_API_URL/teams")
@@ -260,10 +256,7 @@ runs:
             echo "repo name = ${repo_name[$i - 1]}"
 
             # Range of length of members from repo
-            echo "length_repo_members = ${#repo_member_roles[@]}"
-            echo "repo_member_roles = ${repo_member_roles[@]}"
-          
-            length_repo_members="${#repo_member_roles[@]}"
+            length_repo_members="${#repo_member_name[@]}"
             length_repo_groups="${#repo_team_name[@]}"
             length_repo_branches="${#repo_branches[@]}"
         
@@ -289,10 +282,8 @@ runs:
             if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
-                echo "${!repo_member_roles[@]}"
-                for member in "${!repo_member_roles[@]}"; do
-                  echo "member = $member"
-                  echo -n "$member<br>" >>${{ inputs.outputFileName }}.md
+                for j in $(seq 0 "$length_repo_members"); do
+                  echo -n "${repo_member_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
                 done
               fi
               if [[ $length_repo_groups != 0 ]]; then
@@ -308,50 +299,22 @@ runs:
               # Roles
               if [[ $length_repo_members != 0 ]]; then
                 echo -n "<br>" >>${{ inputs.outputFileName }}.md
-            
+          
                 for j in $(seq 0 "$length_repo_members"); do
-                  member_role="${repo_member_roles[${repo_member_name[$j]}]}"
-                  org_role="${roles[${users[@]/$repo_member_name[$j]}]}"
-            
-                  if [[ " ${repo_team_members[@]} " =~ " ${repo_member_name[$j]} " ]]; then
-                    team_role=""
-                    for k in $(seq 0 "$length_repo_groups"); do
-                      if [[ " ${team_content[${repo_team_name[$k]}]} " =~ " ${repo_member_name[$j]} " ]]; then
-                        if [[ "${repo_team_permission[$k]}" == "admin" && "$team_role" != "admin" ]]; then
-                          team_role="admin"
-                        elif [[ "${repo_team_permission[$k]}" == "maintain" && "$team_role" != "admin" && "$team_role" != "maintain" ]]; then
-                          team_role="maintain"
-                        elif [[ "${repo_team_permission[$k]}" == "write" && "$team_role" != "admin" && "$team_role" != "maintain" && "$team_role" != "write" ]]; then
-                          team_role="write"
-                        elif [[ "${repo_team_permission[$k]}" == "read" && "$team_role" != "admin" && "$team_role" != "maintain" && "$team_role" != "write" && "$team_role" != "read" ]]; then
-                          team_role="read"
-                        fi
-                      fi
-                    done
-            
-                    if [[ "$team_role" == "admin" || "$member_role" == "admin" ]]; then
-                      echo -n "admin(team)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$team_role" == "maintain" || "$member_role" == "maintain" ]]; then
-                      echo -n "maintain(team)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$team_role" == "write" || "$member_role" == "write" ]]; then
-                      echo -n "write(team)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$team_role" == "read" || "$member_role" == "read" ]]; then
-                      echo -n "read(team)<br>" >>${{ inputs.outputFileName }}.md
-                    else
-                      echo -n "${org_role}<br>" >>${{ inputs.outputFileName }}.md
+                  user_in_team=false
+                  for repo_team_member in "${repo_team_members[@]}"; do
+                    if [[ "${repo_member_name[$j]}" == "$repo_team_member" ]]; then
+                      echo "repo_team_member = $repo_team_member"
+                      echo "repo_member_name = ${repo_member_name[$j]}"
+                      user_in_team=true
+                      break
                     fi
+                  done
+          
+                  if $user_in_team; then
+                    echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
                   else
-                    if [[ "$member_role" == "admin" ]]; then
-                      echo -n "admin(repo)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$member_role" == "maintain" ]]; then
-                      echo -n "maintain(repo)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$member_role" == "write" ]]; then
-                      echo -n "write(repo)<br>" >>${{ inputs.outputFileName }}.md
-                    elif [[ "$member_role" == "read" ]]; then
-                      echo -n "read(repo)<br>" >>${{ inputs.outputFileName }}.md
-                    else
-                      echo -n "${org_role}<br>" >>${{ inputs.outputFileName }}.md
-                    fi
+                    echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
                   fi
                 done
               fi
