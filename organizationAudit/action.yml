@@ -20,330 +20,309 @@ runs:
     - run: |
         ORG_NAME=${{ github.repository_owner }}
         GITHUB_TOKEN=${{ inputs.secretToken }}
+        filename=${{ inputs.outputFileName }}
 
         timestamp=$(date)
 
+        # Function for API request
+        make_api_request() {
+            api_url=$1
+            curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$api_url"
+        }
+        # Function for fetching the CodeOwners 
+        fetch_and_format_codeowners() {
+            repo_name=$1
+            paths=("CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS")
+            formatted_codeowners=""
+        
+            for path in "${paths[@]}"; do
+                codeowners_response=$(make_api_request "https://api.github.com/repos/$ORG_NAME/$repo_name/contents/$path")
+                if jq -e '.download_url' <<<"$codeowners_response" >/dev/null 2>&1; then
+                    download_url=$(jq -r '.download_url' <<< "$codeowners_response")
+                    codeowners_content=$(curl -s "$download_url")
+                    formatted_codeowners=$(echo "$codeowners_content" | sed -e '/^#/d' -e '/^$/d' | tr '\n' '<br>')
+                    break
+                fi
+            done
+        
+            echo "${formatted_codeowners:-No CODEOWNERS file found}"
+        }
+        # Function for comparing and getting the highest role between org members/repo and repo_teams
+        get_highest_role() {
+            username=$1
+            repo_role=$2
+            teams=$3
+        
+            # Check if the user exists in the organization members
+            if [[ "${user_roles[$username]}" == "admin" ]]; then
+                # If the user is an admin in the organization, return only the role
+                echo "admin"
+            elif [[ "${user_roles[$username]}" == "member" ]]; then
+                # If the user is a member in the organization, check if they have a higher role in the repository team
+                team_role=""
+        
+                if [[ "$teams" != "No teams found" ]]; then
+                    IFS=',' read -r -a team_info <<< "$teams"
+                    for team in "${team_info[@]}"; do
+                        IFS=':' read -r -a team_permission <<< "$team"
+                        team_name="${team_permission[0]}"
+                        permission="${team_permission[1]}"
+        
+                        if [[ "${org_team_members[$team_name]}" =~ $username ]] && [[ "$permission" == "admin" ]]; then
+                            team_role="admin(Team)"
+                            break
+                        elif [[ "${org_team_members[$team_name]}" =~ $username ]] && [[ "$permission" == "write" ]] && [[ "$team_role" != "admin(Team)" ]]; then
+                            team_role="write(Team)"
+                        elif [[ "${org_team_members[$team_name]}" =~ $username ]] && [[ "$permission" == "read" ]] && [[ "$team_role" != "admin(Team)" ]] && [[ "$team_role" != "write(Team)" ]]; then
+                            team_role="read(Team)"
+                        fi
+                    done
+                fi
+        
+                if [[ -n "$team_role" ]]; then
+                    echo "$team_role"
+                else
+                    echo "$repo_role(Repo)"
+                fi
+            else
+                # If the user is not found in the organization members, return the role from the repository
+                echo "$repo_role(Repo)"
+            fi
+        }
+        # Function for generating the md table.
+        generate_markdown_table() {
+            org_name=$1
+            declare -n repo_data_ref=$2
+            declare -n user_roles_ref=$3
+            declare -n org_team_members_ref=$4
+            declare -n names_ref=$5
+            timestamp=$6
+            filename=$7
+        
+            # Generate the Markdown content
+            markdown_content="# GitHub Access Report - Status\n"
+            markdown_content+="Generated at $timestamp\n\n"
+            markdown_content+="## Organization: **$org_name**\n\n"
+            markdown_content+="### Members\n\n"
+            markdown_content+="| No | Username | Name | Role | Teams |\n"
+            markdown_content+="| -- | -------- | ---- | ---- | ----- |\n"
+        
+            # Add user information to the Markdown content
+            i=1
+            for username in "${!user_roles_ref[@]}"; do
+                name=${names_ref[$username]}
+                role=${user_roles_ref[$username]}
+                teams=""
+                for team_name in "${!org_team_members_ref[@]}"; do
+                    if [[ "${org_team_members_ref[$team_name]}" =~ $username ]]; then
+                        teams+="$team_name<br>"
+                    fi
+                done
+                markdown_content+="| $((i++)) | $username | $name | $role | $teams |\n"
+            done
+        
+            # Add repository information to the Markdown content
+            markdown_content+="\n### Repositories\n\n"
+            markdown_content+="| No | Repo Name | Visibility | Branches | CODEOWNERS | Members | Member Roles | Teams | Team Roles |\n"
+            markdown_content+="| -- | --------- | ---------- | -------- | ---------- | ------- | ------------ | ----- | ---------- |\n"
+        
+            # Add repository details to the Markdown content
+            i=1
+            for repo_name in "${!repo_data_ref[@]}"; do
+                repo_info="${repo_data_ref[$repo_name]}"
+                visibility=$(jq -r '.visibility' <<< "$repo_info")
+                collaborators=$(jq -r '.collaborators' <<< "$repo_info")
+                teams=$(jq -r '.teams' <<< "$repo_info")
+                branches=$(jq -r '.branches' <<< "$repo_info")
+                codeowners=$(jq -r '.codeowners' <<< "$repo_info")
+        
+                markdown_content+="| $((i++)) | $repo_name | $visibility | "
+        
+                # Add branches
+                IFS=',' read -r -a branch_names <<< "$branches"
+                for branch_name in "${branch_names[@]}"; do
+                    markdown_content+="$branch_name<br>"
+                done
+        
+                if [[ "$codeowners" == "null" ]]; then
+                    markdown_content+=" |  | "
+                else
+                    markdown_content+=" | $codeowners | "
+                fi
+        
+                # Add members and their roles
+                members=""
+                member_roles=""
+        
+                if [[ -n "$collaborators" ]]; then
+                    IFS=',' read -r -a collaborator_info <<< "$collaborators"
+                    for info in "${collaborator_info[@]}"; do
+                        IFS=':' read -r -a user_role <<< "$info"
+                        username="${user_role[0]}"
+                        role="${user_role[1]}"
+                        members+="$username<br>"
+                        highest_role=$(get_highest_role "$username" "$role" "$teams")
+                        member_roles+="$highest_role<br>"
+                    done
+                else
+                    members="No collaborators found"
+                    member_roles=""
+                fi
+        
+                markdown_content+="$members | $member_roles | "
+        
+                # Add teams and their roles
+                team_names=""
+                team_roles=""
+        
+                if [[ "$teams" != "No teams found" ]]; then
+                    IFS=',' read -r -a team_info <<< "$teams"
+                    for info in "${team_info[@]}"; do
+                        IFS=':' read -r -a team_permission <<< "$info"
+                        team_name="${team_permission[0]}"
+                        permission="${team_permission[1]}"
+                        team_names+="$team_name<br>"
+                        team_roles+="$permission<br>"
+                    done
+                else
+                    team_names="No teams found"
+                    team_roles=""
+                fi
+        
+                markdown_content+="$team_names | $team_roles |\n"
+            done
+        
+            # Write the Markdown content to the file
+            echo -e "$markdown_content" > "$filename.md"
+            echo "Markdown table generated successfully in $filename.md"
+        }
+        
+        # API URLs
         ORG_API_URL="https://api.github.com/orgs/$ORG_NAME"
-
-        # Send a GET request to GH API and retrieve members from organization
-        response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$ORG_API_URL/members")
-        if [[ $response == *"Bad credentials"* ]]; then
-          cat >${{ inputs.outputFileName }}.md <<EOF
+        USER_API_URL="https://api.github.com/users"
+        ORG_TEAMS_API_URL="https://api.github.com/orgs/$ORG_NAME/teams"
+        
+        
+        # Retrieve members from organization
+        org_members_response=$(make_api_request "$ORG_API_URL/members")
+        if [[ $org_members_response == *"Bad credentials"* ]]; then
+            cat >$filename.md <<EOF
         Bad credentials: The provided token has no access for running this script!
-
+        
         Follow the Readme.md file for more information about the installation
         EOF
         else
-          # Get organization members
-          members=$(echo "$response" | jq -r '.[].login')
-
-          # Username and roles:
-          users=()
-          roles=()
-          for username in $members; do
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$ORG_API_URL/memberships/$username")
-
-            role=$(echo "$response" | jq -r '.role')
-            users+=("$username")
-            roles+=("$role")
-
-          done
-
-          # Name of members
-          names=()
-          for member_id in $members; do
-            USER_API_URL="https://api.github.com/users"
-
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$USER_API_URL/$member_id")
-
-            member_name=$(echo "$response" | jq -r '.name')
-            names+=("$member_name")
-
-          done
-
-          # Teams
-          response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$ORG_API_URL/teams")
-
-          declare -A teams
-          while IFS= read -r team_info; do
-            team_id=$(echo "$team_info" | jq -r '.id')
-            team_name=$(echo "$team_info" | jq -r '.name')
-            teams[$team_id]=$team_name
-          done <<<"$(echo "$response" | jq -c '.[]')"
-
-          # Team's members
-          declare -A team_content
-          for id in "${!teams[@]}"; do
-            TEAM_API_URL="https://api.github.com/teams"
-
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$TEAM_API_URL/$id/members")
-            team_member_name=$(echo "$response" | jq -r '.[].login')
-
-            # key = name of team, value = members which belongs to that team
-            team_content["${teams[$id]}"]="$team_member_name"
-
-          done
-
-          # Write member title in file ${{ inputs.outputFileName }}.md
-          cat >${{ inputs.outputFileName }}.md <<EOF
-
-        # GitHub Access Report - Status
-        Generated at $timestamp
-
-        ## Organization: **$ORG_NAME**
-
-        ### Members
-
-        | No | Username | Name | Role | Teams |
-        | -- | -------- | ---- | ---- | ----- |
-        EOF
-
-          # Write member content in file ${{ inputs.outputFileName }}.md
-          length=${#users[@]}
-          # Range of length of users
-          for i in $(seq 1 "$length"); do
-            echo -n "| $i | ${users[$i - 1]} | " >>${{ inputs.outputFileName }}.md
-            if [[ "${names[$i - 1]}" == "null" ]]; then
-              echo -n " | " >>${{ inputs.outputFileName }}.md
-            else
-              echo -n "${names[$i - 1]} | " >>${{ inputs.outputFileName }}.md
-            fi
-            if [[ "${roles[$i - 1]}" == "admin" ]]; then
-              echo -n "<ins>**${roles[$i - 1]}**</ins> | " >>${{ inputs.outputFileName }}.md
-            else
-              echo -n "${roles[$i - 1]} | " >>${{ inputs.outputFileName }}.md
-            fi
-            for id in "${!team_content[@]}"; do
-              for team_name in ${team_content[$id]}; do
-                if [ "${users[$i - 1]}" == "$team_name" ]; then
-                  echo -n "$id<br>" >>${{ inputs.outputFileName }}.md
-                fi
-              done
-            done
-
-            echo "|" >>${{ inputs.outputFileName }}.md
-          done
-
-          # Repositories
-          response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$ORG_API_URL/repos")
-
-          response_repo_name=$(echo "$response" | jq -r '.[].name')
-          response_repo_visibility=$(echo "$response" | jq -r '.[].visibility')
-
-          repo_name=()
-          repo_visibility=()
-          for name in $response_repo_name; do
-            repo_name+=("$name")
-          done
-          for visibility in $response_repo_visibility; do
-            repo_visibility+=("$visibility")
-          done
-
-          # Fetch CODEOWNERS file
-          fetch_and_format_codeowners() {
-              repo_name=$1
-              paths=("CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS")
-              formatted_codeowners=""
-              codeowners_content=""
+            # Get organization members
+            org_members=$(echo "$org_members_response" | jq -r '.[].login')
         
-              for path in "${paths[@]}"; do
-                  response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/$ORG_NAME/$repo_name/contents/$path")
-                  if echo "$response" | grep -q "download_url"; then
-                      download_url=$(echo "$response" | grep "download_url" | cut -d '"' -f 4)
-                      codeowners_content=$(curl -s "$download_url")
-                      while IFS= read -r line; do
-                        # Skip comments and empty lines
-                        if [[ "$line" =~ ^# ]] || [[ -z "$line" ]]; then
-                            continue
-                        fi
-                        formatted_codeowners+="${line}<br>"
-                      done <<< "$codeowners_content"
-                      break
-                  fi
-              done
-        
-              echo "$formatted_codeowners"
-          }
-
-          # Write repository title in file ${{ inputs.outputFileName }}.md
-          cat >>${{ inputs.outputFileName }}.md <<EOF
-
-        ### Repositories
-
-        | No | Repo Name | Visibility | Branches | CODEOWNERS | Members/Teams | Role |
-        | -- | --------- | ---------- | -------- | ---------- | ------------- | ---- |
-        EOF
-
-          length_repo="${#repo_name[@]}"
-          declare -A repo_perms_error
-          for i in $(seq 1 "$length_repo"); do
-
-            REPO_API_URL="https://api.github.com/repos/$ORG_NAME/${repo_name[$i - 1]}"
-
-            # Fetch Members and Roles
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$REPO_API_URL/collaborators")
-            if jq -e '.message' <<<"$response" >/dev/null 2>&1; then
-              repo_perms_error["${repo_name[$i - 1]}"]=$(echo "$response" | jq -r '.message')
-              response_repo_member=""
-              response_repo_member_roles=""
-            else
-              response_repo_member=$(echo "$response" | jq -r '.[].login')
-              response_repo_member_roles=$(echo "$response" | jq -r '.[].role_name')
-            fi
-
-            repo_member_name=()
-            repo_member_role=()
-            for name in $response_repo_member; do
-              repo_member_name+=("$name")
-            done
-            for role in $response_repo_member_roles; do
-              repo_member_role+=("$role")
-            done
-
-            # Fetch Teams
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$REPO_API_URL/teams")
-            if jq -e '.message' <<<"$response" >/dev/null 2>&1; then
-              response_repo_team_name=""
-              response_repo_team_permission=""
-              response_repo_team_slug=""
-            else
-              response_repo_team_name=$(echo "$response" | jq -r '.[].name')
-              response_repo_team_permission=$(echo "$response" | jq -r '.[].permission')
-              response_repo_team_slug=$(echo "$response" | jq -r '.[].slug')
-            fi
-
-            repo_team_name=()
-            repo_team_permission=()
-            repo_team_members=()
-            for team_name in $response_repo_team_name; do
-              repo_team_name+=("$team_name")
-              team_members_response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/$ORG_NAME/teams/$team_name/members")
-              mapfile -t team_members < <(echo "$team_members_response" | jq -r '.[].login')
-              repo_team_members+=("${team_members[@]}")
-            done
-            for team_perm in $response_repo_team_permission; do
-              if [[ "$team_perm" == "push" ]]; then
-                repo_team_permission+=("write")
-              elif [[ "$team_perm" == "pull" ]]; then
-                repo_team_permission+=("read")
-              else
-                repo_team_permission+=("$team_perm")
-              fi
+            # Username and roles:
+            declare -A user_roles
+            for username in $org_members; do
+              username_response=$(make_api_request "$ORG_API_URL/memberships/$username")
+              role=$(echo "$username_response" | jq -r '.role')
+              user_roles[$username]=$role
             done
         
-            # Fetch Branches
-            response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "$REPO_API_URL/branches")
-            if jq -e '.message' <<<"$response" >/dev/null 2>&1; then
-                repo_branches_error["${repo_name[$i - 1]}"]=$(echo "$response" | jq -r '.message')
-                response_repo_branches=""
-            else
-                response_repo_branches=$(echo "$response" | jq -r '.[].name')
-            fi
-        
-            repo_branches=()
-            for branch in $response_repo_branches; do
-            repo_branches+=("$branch")
+            # Name of members
+            declare -A names
+            for member_id in $org_members; do
+                user_id_response=$(make_api_request "$USER_API_URL/$member_id")
+                member_name=$(echo "$user_id_response" | jq -r '.name // ""')
+                names[$member_id]=$member_name
             done
         
-            # Fetch CODEOWNERS
-            formatted_codeowners=$(fetch_and_format_codeowners "${repo_name[$i - 1]}")
-            if [[ -z "$formatted_codeowners" ]]; then
-                formatted_codeowners="No CODEOWNERS file found"
-            fi
+            # Teams
+            org_teams_response=$(make_api_request "$ORG_TEAMS_API_URL")
+            declare -A org_team_members
+            while IFS= read -r team_info; do
+              team_name=$(echo "$team_info" | jq -r '.name')
+              members_url=$(echo "$team_info" | jq -r '.members_url')
+              members_response=$(make_api_request "${members_url//\{\/member\}/}")
         
-            # Write repository content in file ${{ inputs.outputFileName }}.md
-            echo -n "| $i | ${repo_name[$i - 1]} | ${repo_visibility[$i - 1]} | " >>${{ inputs.outputFileName }}.md
-            echo "repo name = ${repo_name[$i - 1]}"
-
-            # Range of length of members from repo
-            length_repo_members="${#repo_member_name[@]}"
-            length_repo_groups="${#repo_team_name[@]}"
-            length_repo_branches="${#repo_branches[@]}"
+              org_team_members[$team_name]=$(echo "$members_response" | jq -r '.[].login' | tr '\n' ' ')
+            done <<< "$(echo "$org_teams_response" | jq -c '.[]')"
         
-            # Branches
-            if [[ $length_repo_branches != 0 ]]; then
-                for j in $(seq 0 "$(($length_repo_branches - 1))"); do
-                    echo -n "${repo_branches[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                done
-            else
-                if [[ -n "${repo_branches_error[${repo_name[$i - 1]}]}" ]]; then
-                    echo -n "Error fetching branches: ${repo_branches_error[${repo_name[$i - 1]}]}<br>" >>${{ inputs.outputFileName }}.md
+            # Repositories
+            repo_response=$(make_api_request "$ORG_API_URL/repos")
+            declare -A repo_info
+            while IFS= read -r repo; do
+                name=$(echo "$repo" | jq -r '.name')
+                visibility=$(echo "$repo" | jq -r '.visibility')
+                repo_info[$name]=$visibility
+            done <<< "$(echo "$repo_response" | jq -c '.[]')"
+        
+            # Repository data
+            declare -A repo_data
+            for repo_name in "${!repo_info[@]}"; do
+                REPO_API_URL="https://api.github.com/repos/$ORG_NAME/$repo_name"
+        
+                # Fetch Collaborators and Roles
+                collaborators_response=$(make_api_request "$REPO_API_URL/collaborators")
+                if jq -e '.message' <<<"$collaborators_response" >/dev/null 2>&1; then
+                    repo_data[$repo_name]=$(jq -n --arg visibility "${repo_info[$repo_name]}" --arg error "$(jq -r '.message' <<< "$collaborators_response")" '{
+                        "visibility": $visibility,
+                        "collaborators_error": $error,
+                        "collaborators": "",
+                        "teams": "",
+                        "branches": ""
+                    }')
                 else
-                    echo -n "No branches<br>" >>${{ inputs.outputFileName }}.md
-                fi
-            fi
+                    collaborators=""
+                    while IFS= read -r collaborator; do
+                        username=$(jq -r '.login' <<< "$collaborator")
+                        role=$(jq -r '.role_name' <<< "$collaborator")
+                        collaborators+="$username:$role,"
+                    done <<< "$(jq -c '.[]' <<< "$collaborators_response")"
+                    collaborators=${collaborators%,}
         
-            echo -n " | " >>${{ inputs.outputFileName }}.md
+                    # Fetch Teams
+                    teams_response=$(make_api_request "$REPO_API_URL/teams")
         
-            # CODEOWNERS append
-            echo -n "$formatted_codeowners | " >>${{ inputs.outputFileName }}.md
-
-            # Members/Teams
-            if [[ $length_repo_members != 0 ]] || [[ $length_repo_groups != 0 ]]; then
-              if [[ $length_repo_members != 0 ]]; then
-                echo -n "**Members**<br>" >>${{ inputs.outputFileName }}.md
-                for j in $(seq 0 "$length_repo_members"); do
-                  echo -n "${repo_member_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                done
-              fi
-              if [[ $length_repo_groups != 0 ]]; then
-                echo -n "**Teams**<br>" >>${{ inputs.outputFileName }}.md
-                for j in $(seq 0 "$length_repo_groups"); do
-                  echo -n "${repo_team_name[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                  echo "repo team = ${repo_team_name[$j-1]}"
-                done
-              fi
-
-              echo -n " | " >>${{ inputs.outputFileName }}.md
-
-              # Roles
-              if [[ $length_repo_members != 0 ]]; then
-                echo -n "<br>" >>${{ inputs.outputFileName }}.md
-          
-                for j in $(seq 0 "$length_repo_members"); do
-                  user_in_team=false
-                  for repo_team_member in "${repo_team_members[@]}"; do
-                    if [[ "${repo_member_name[$j]}" == "$repo_team_member" ]]; then
-                      echo "repo_team_member = $repo_team_member"
-                      echo "repo_member_name = ${repo_member_name[$j]}"
-                      user_in_team=true
-                      break
+                    teams=""
+                    if ! jq -e '.message' <<<"$teams_response" >/dev/null 2>&1; then
+                        if jq -e 'length > 0' <<<"$teams_response" >/dev/null 2>&1; then
+                            while IFS= read -r team; do
+                                team_name=$(jq -r '.name' <<< "$team")
+                                team_permission=$(jq -r '.permission' <<< "$team")
+                                case "$team_permission" in
+                                    "push") team_permission="write" ;;
+                                    "pull") team_permission="read" ;;
+                                esac
+                                teams+="$team_name:$team_permission,"
+                            done <<< "$(jq -c '.[]' <<< "$teams_response")"
+                            teams=${teams%,}
+                        else
+                            teams="No teams found"
+                        fi
+                    else
+                        teams="No teams found"
                     fi
-                  done
-          
-                  if $user_in_team; then
-                    echo -n "${repo_member_role[$j]}(Team)<br>" >>${{ inputs.outputFileName }}.md
-                  else
-                    echo -n "${repo_member_role[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                  fi
-                done
-              fi
-          
-              if [[ $length_repo_groups != 0 ]]; then
-                echo -n "<br>" >>${{ inputs.outputFileName }}.md
-                for j in $(seq 0 "$length_repo_groups"); do
-                  echo -n "${repo_team_permission[$j]}<br>" >>${{ inputs.outputFileName }}.md
-                done
-              fi
-              echo " |" >>${{ inputs.outputFileName }}.md
-
-            else
-              echo " | |" >>${{ inputs.outputFileName }}.md
-            fi
-          done
-
-          # Provide error messages in case these exist
-          if [[ "${#repo_perms_error[@]}" -gt 0 ]]; then
-            echo ""
-            echo "### You have the following errors:" >>${{ inputs.outputFileName }}.md
-            echo ""
-            for i in "${!repo_perms_error[@]}"; do
-              echo "- Repo: $i" >>${{ inputs.outputFileName }}.md
-              echo "    - Message: ${repo_perms_error[$i]}" >>${{ inputs.outputFileName }}.md
+        
+                    # Fetch Branches
+                    branches_response=$(make_api_request "$REPO_API_URL/branches")
+                    branches=""
+                    while IFS= read -r branch; do
+                        branch_name=$(jq -r '.name' <<< "$branch")
+                        branches+="$branch_name,"
+                    done <<< "$(jq -c '.[]' <<< "$branches_response")"
+                    branches=${branches%,}
+        
+                    # Fetch CODEOWNERS
+                    formatted_codeowners=$(fetch_and_format_codeowners "$repo_name")
+        
+                    repo_data[$repo_name]=$(jq -n --arg visibility "${repo_info[$repo_name]}" --arg collaborators "$collaborators" --arg teams "$teams" --arg branches "$branches" --arg codeowners "$formatted_codeowners" '{
+                        "visibility": $visibility,
+                        "collaborators_error": "",
+                        "collaborators": $collaborators,
+                        "teams": $teams,
+                        "branches": $branches,
+                        "codeowners": $codeowners
+                    }')
+                fi
             done
-            echo "" >>${{ inputs.outputFileName }}.md
-            echo "This can be caused by not having permission on those repos." >>${{ inputs.outputFileName }}.md
-          fi
+        
+            # Call the function to generate the Markdown table
+            generate_markdown_table "$ORG_NAME" repo_data user_roles org_team_members names "$timestamp" "$filename"
         fi
         
         current_date=$(date +"%d %B %Y")
