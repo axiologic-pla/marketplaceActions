@@ -123,8 +123,8 @@ runs:
         
             # Add repository information to the Markdown content
             markdown_content+="\n### Repositories\n\n"
-            markdown_content+="| No | Repo Name | Visibility | Branches | CODEOWNERS | Members | Member Roles | Teams | Team Roles |\n"
-            markdown_content+="| -- | --------- | ---------- | -------- | ---------- | ------- | ------------ | ----- | ---------- |\n"
+            markdown_content+="| No | Repo Name | Visibility | Branches | CODEOWNERS | Members | Member Roles (Source) | Teams | Team Roles |\n"
+            markdown_content+="| -- | --------- | ---------- | -------- | ---------- | ------- | --------------------- | ----- | ---------- |\n"
         
             # Add repository details to the Markdown content
             i=1
